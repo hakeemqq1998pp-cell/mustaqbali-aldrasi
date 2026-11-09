@@ -58,4 +58,5 @@ function chooseStage(el){document.querySelectorAll('.stage').forEach(x=>x.classL
 function filterDemo(){let q=document.getElementById('search').value.trim().toLowerCase(),cards=[...document.querySelectorAll('.teacher')],count=0;cards.forEach(c=>{let show=!q||c.dataset.terms.includes(q)||c.innerText.toLowerCase().includes(q);c.style.display=show?'flex':'none';if(show)count++});let old=document.querySelector('.empty');if(old)old.remove();if(!count){let e=document.createElement('div');e.className='empty';e.textContent='لا توجد نتائج في بيانات العرض التجريبية. ستتوفر نتائج المدرسين بعد ربط قاعدة البيانات.';document.getElementById('teacher-list').appendChild(e)}}
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}
 </script>
+<script type="module" src="/app.js"></script>
 </body></html>
