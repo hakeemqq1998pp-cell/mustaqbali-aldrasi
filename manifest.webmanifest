@@ -5,8 +5,8 @@
   "dir": "rtl",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f8fc",
+  "background_color": "#10152b",
   "theme_color": "#10152b",
   "description": "منصتك للتعلّم، التطور، وصناعة مستقبلك",
-  "icons": []
+  "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
 }
