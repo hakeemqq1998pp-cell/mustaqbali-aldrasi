@@ -1,0 +1,12 @@
+{
+  "name": "مستقبلي الدراسي",
+  "short_name": "مستقبلي",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fc",
+  "theme_color": "#10152b",
+  "description": "منصتك للتعلّم، التطور، وصناعة مستقبلك",
+  "icons": []
+}
