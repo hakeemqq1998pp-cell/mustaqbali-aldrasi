@@ -1,0 +1,33 @@
+name: Validate platform files
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  static-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate JavaScript syntax
+        run: node --input-type=module --check < app.js
+      - name: Validate web manifest JSON
+        run: python -m json.tool manifest.webmanifest > /dev/null
+      - name: Verify required platform assets
+        run: |
+          test -s index.html
+          test -s app.js
+          test -s sw.js
+          test -s netlify.toml
+          grep -q 'live-dashboard' app.js
+          grep -q 'teacher_status' app.js
