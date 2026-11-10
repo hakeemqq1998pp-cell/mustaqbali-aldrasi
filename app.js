@@ -81,7 +81,6 @@ async function dashboard(){
    '<div class="live-card" style="margin-top:14px"><h3>نتائج الاختبارات</h3>'+(a.data.map(x=>'<div class="row-live"><span>'+new Date(x.completed_at).toLocaleDateString("ar-IQ")+'</span><b>'+x.score+'%</b></div>').join("")||"لا توجد نتائج بعد.")+'</div>'+
    '<div class="live-card" style="margin-top:14px"><h3>تقييم الدورات المكتملة</h3>'+(completedCourses.map(x=>{const course=courses.find(y=>y.id===x.course_id),review=rw.data.find(y=>y.course_id===x.course_id);return review?'<div class="row-live"><span>'+esc(course?.title||"دورة")+'</span><b>'+review.rating+'/5 ★</b></div>':'<form data-review-form data-course-id="'+x.course_id+'" style="border-top:1px solid #38265d;padding:12px 0"><b>'+esc(course?.title||"دورة")+'</b><label>التقييم<select name="rating"><option value="5">5 — ممتاز</option><option value="4">4 — جيد جداً</option><option value="3">3 — جيد</option><option value="2">2 — مقبول</option><option value="1">1 — يحتاج تحسين</option></select></label><label>تعليقك (اختياري)<textarea name="comment" maxlength="1000"></textarea></label><button class="primary-live">إرسال التقييم</button></form>'}).join("")||"تظهر هنا الدورات بعد إكمالها.")+'</div>';root.onclick=async ev=>{const q=ev.target.closest("[data-quiz-course]");if(q)await startCourseQuiz(q.dataset.quizCourse)};root.querySelectorAll("[data-review-form]").forEach(form=>form.onsubmit=submitCourseReview);
   }
-  }
   addProfileEditor();
  }catch(e){root.innerHTML='<div class="live-card">تعذر تحميل البيانات: '+esc(e.message)+'</div>'}
 }
