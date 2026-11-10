@@ -76,7 +76,7 @@ async function loadTeacherQuestions(courseId){
 }
 async function saveQuizQuestion(ev){
  ev.preventDefault();const f=new FormData(ev.currentTarget),options=[0,1,2,3].map(i=>String(f.get("option_"+i)||"").trim());
- const r=await supabase.rpc("teacher_save_course_question",{p_course_id:String(f.get("course_id")),p_question_id:null,p_prompt:String(f.get("prompt")).trim(),p_options:options,p_correct_option:Number(f.get("correct_option")),p_explanation:String(f.get("explanation")||"").trim(),p_sort_order:Date.now()});
+ const r=await supabase.rpc("teacher_save_course_question",{p_course_id:String(f.get("course_id")),p_question_id:null,p_prompt:String(f.get("prompt")).trim(),p_options:options,p_correct_option:Number(f.get("correct_option")),p_explanation:String(f.get("explanation")||"").trim(),p_sort_order:null});
  if(r.error){notify("تعذر حفظ السؤال: "+r.error.message);return}
  notify("تمت إضافة السؤال وحفظ الإجابة الصحيحة بأمان.");ev.currentTarget.reset();await loadTeacherQuestions(String(f.get("course_id")));
 }
