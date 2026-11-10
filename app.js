@@ -17,7 +17,20 @@ async function loadPublic(){const [s,c,t]=await Promise.all([supabase.from("subj
 async function dashboard(){
  const root=$("#live-dash-content");root.innerHTML="جارٍ تحميل بياناتك...";
  try{
-  if(profile.account_type==="teacher"){
+  const adminMode=user?.app_metadata?.role==="admin";
+  if(adminMode){
+   const [cr,tr]=await Promise.all([
+    supabase.from("courses").select("id,title,description,stage,price_iqd,status,teacher_id,created_at").order("created_at",{ascending:false}).limit(100),
+    supabase.from("profiles").select("id,full_name,governorate,city,bio").eq("account_type","teacher").order("created_at",{ascending:false}).limit(100)
+   ]);
+   if(cr.error)throw cr.error;if(tr.error)throw tr.error;
+   const teacherById=new Map(tr.data.map(x=>[x.id,x]));
+   root.innerHTML='<div class="live-grid"><div class="live-card"><b>'+tr.data.length+'</b><p>حسابات المدرسين</p></div><div class="live-card"><b>'+cr.data.filter(x=>x.status==="draft").length+'</b><p>دورات بانتظار المراجعة</p></div><div class="live-card"><b>'+cr.data.filter(x=>x.status==="published").length+'</b><p>دورات منشورة</p></div></div>'+
+   '<div class="live-card" style="margin-top:14px"><h3>مراجعة الدورات ونشرها</h3>'+
+   (cr.data.map(x=>'<div class="row-live"><span><b>'+esc(x.title)+'</b><br><small>'+esc(teacherById.get(x.teacher_id)?.full_name||"مدرس")+' · '+esc(x.stage)+' · '+Number(x.price_iqd||0).toLocaleString("ar-IQ")+' د.ع</small><br><small>'+esc(x.description)+'</small><br><small>الحالة: '+esc(x.status)+'</small></span><span>'+(x.status!=="published"?'<button class="primary-live" data-course-status="published" data-id="'+x.id+'">موافقة ونشر</button> ':"")+(x.status!=="rejected"?'<button class="primary-live" data-course-status="rejected" data-id="'+x.id+'">رفض</button> ':"")+(x.status!=="draft"?'<button class="primary-live" data-course-status="draft" data-id="'+x.id+'">إعادتها لمسودة</button>':"")+'</span></div>').join("")||"لا توجد دورات حتى الآن.")+'</div>'+
+   '<div class="live-card" style="margin-top:14px"><h3>المدرسون المسجلون</h3>'+(tr.data.map(x=>'<div class="row-live"><span>'+esc(x.full_name)+'<br><small>'+esc(x.governorate||"")+' '+esc(x.city||"")+'</small></span><small>مدرس</small></div>').join("")||"لا يوجد مدرسون بعد.")+'</div>';
+   root.onclick=async ev=>{const b=ev.target.closest("[data-course-status]");if(b)await moderateCourse(b.dataset.id,b.dataset.courseStatus)};
+  }else if(profile.account_type==="teacher"){
    const [c,b,e]=await Promise.all([
     supabase.from("courses").select("id,title,status,price_iqd,stage").eq("teacher_id",user.id).order("created_at",{ascending:false}),
     supabase.from("bookings").select("id,scheduled_at,status,price_iqd,duration_minutes").eq("teacher_id",user.id).order("scheduled_at",{ascending:false}).limit(20),
@@ -49,6 +62,13 @@ async function dashboard(){
    '<div class="live-card" style="margin-top:14px"><h3>نتائج الاختبارات</h3>'+(a.data.map(x=>'<div class="row-live"><span>'+new Date(x.completed_at).toLocaleDateString("ar-IQ")+'</span><b>'+x.score+'%</b></div>').join("")||"لا توجد نتائج بعد.")+'</div>';
   }
  }catch(e){root.innerHTML='<div class="live-card">تعذر تحميل البيانات: '+esc(e.message)+'</div>'}
+}
+async function moderateCourse(id,status){
+ if(!["published","rejected","draft"].includes(status))return;
+ const r=await supabase.from("courses").update({status}).eq("id",id);
+ if(r.error){notify("تعذر تحديث الدورة: "+r.error.message);return}
+ notify(status==="published"?"تمت الموافقة على الدورة ونشرها.":status==="rejected"?"تم رفض الدورة.":"أعيدت الدورة إلى المسودات.");
+ await dashboard();await loadPublic();
 }
 async function createLesson(ev){ev.preventDefault();const f=new FormData(ev.currentTarget);const url=String(f.get("video_url")||"").trim();if(url&&!url.startsWith("https://")){notify("رابط الفيديو يجب أن يبدأ بـ https://");return}const r=await supabase.from("lessons").insert({course_id:f.get("course_id"),title:f.get("title").trim(),description:String(f.get("description")||"").trim(),video_url:url||null,is_preview:false,sort_order:0});if(r.error){notify(r.error.message);return}notify("تم حفظ الدرس. لن يظهر إلا للطلاب المقبولين في الدورة.");dashboard()}
 async function changeStatus(table,id,status){const r=await supabase.from(table).update({status}).eq("id",id);if(r.error){notify(r.error.message);return}notify("تم تحديث الحالة.");dashboard()}
