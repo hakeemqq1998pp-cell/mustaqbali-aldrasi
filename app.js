@@ -33,7 +33,7 @@ async function dashboard(){
   }else if(profile.account_type==="teacher"){
    const [c,b,e]=await Promise.all([
     supabase.from("courses").select("id,title,status,price_iqd,stage").eq("teacher_id",user.id).order("created_at",{ascending:false}),
-    supabase.from("bookings").select("id,scheduled_at,status,price_iqd,duration_minutes").eq("teacher_id",user.id).order("scheduled_at",{ascending:false}).limit(20),
+    supabase.rpc("teacher_list_own_bookings"),
     supabase.rpc("teacher_list_own_enrollments")
    ]);
    if(c.error)throw c.error;if(b.error)throw b.error;if(e.error)throw e.error;
