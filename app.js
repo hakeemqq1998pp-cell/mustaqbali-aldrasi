@@ -14,6 +14,22 @@ async function forgotPassword(){const email=document.querySelector("#live-auth-f
 async function setSession(s){user=s?.user||null;profile=null;if(user){try{profile=await ensureProfile(user)}catch(e){notify("تعذر إعداد الملف: "+e.message)}}const yes=!!user;$("#live-login").hidden=yes;$("#live-signup").hidden=yes;$("#live-logout").hidden=!yes;$("#live-user").hidden=!yes;$("#live-user").textContent=profile?.full_name||user?.email||"";$("#live-dashboard").hidden=!yes;if(yes){if(!profile){$("#live-dashboard").hidden=true;return}$("#live-dash-title").textContent=user?.app_metadata?.role==="admin"?"لوحة إدارة المنصة":profile.account_type==="teacher"?"لوحة المدرّس":"لوحة الطالب";$("#live-dash-sub").textContent="أهلاً "+profile.full_name+" — هذه مساحتك التعليمية.";await dashboard()}}
 function renderCourses(){const q=$("#live-search").value.toLowerCase().trim(),stage=$("#live-stage").value;const rows=courses.filter(c=>{const subject=subjects.find(x=>x.id===c.subject_id)?.name_ar||"",teacher=teachers.find(x=>x.id===c.teacher_id)?.full_name||"";return (!stage||c.stage===stage)&&(!q||(c.title+" "+c.description+" "+c.stage+" "+subject+" "+teacher).toLowerCase().includes(q))});$("#live-courses").innerHTML=rows.length?rows.map((c,i)=>{const t=teachers.find(x=>x.id===c.teacher_id),subject=subjects.find(x=>x.id===c.subject_id);return '<article class="course"><div class="cover">'+["✧","∑","⌘","◈"][i%4]+'</div><small>'+esc(c.stage)+' · '+esc(subject?.name_ar||"مادة عامة")+' · '+esc(t?.full_name||"مدرس")+'</small><h3>'+esc(c.title)+'</h3><p>'+esc(c.description)+'</p><div class="course-foot"><b>'+Number(c.price_iqd||0).toLocaleString("ar-IQ")+' د.ع</b><button data-enroll="'+c.id+'">طلب التسجيل</button><button data-book="'+c.id+'" style="margin-right:6px;background:#eef0ff;color:#6659d9">حجز درس</button></div></article>'}).join(""):'<div class="live-card">لا توجد دورات منشورة مطابقة حالياً.</div>'}
 async function loadPublic(){const [s,c,t]=await Promise.all([supabase.from("subjects").select("id,name_ar,stage").eq("is_active",true).order("sort_order"),supabase.from("courses").select("id,title,description,stage,subject_id,price_iqd,teacher_id,status").eq("status","published").order("created_at",{ascending:false}).limit(50),supabase.from("profiles").select("id,full_name,governorate,city,bio,teacher_status").eq("account_type","teacher").eq("teacher_status","approved").limit(30)]);if(s.error)console.warn(s.error);if(c.error)console.warn(c.error);if(t.error)console.warn(t.error);subjects=s.data||[];courses=c.data||[];teachers=t.data||[];renderCourses();$("#live-teachers").innerHTML=teachers.length?teachers.map(x=>'<article class="live-card"><b>'+esc(x.full_name)+'</b><p class="muted">'+esc([x.city,x.governorate].filter(Boolean).join("، ")||"مدرس على المنصة")+'</p><small>'+esc(x.bio||"ملف مدرس على مستقبلي الدراسي")+'</small></article>').join(""):'<div class="live-card">لا توجد ملفات مدرسين منشورة بعد.</div>';$("#live-summary").innerHTML='<div class="live-card"><b>'+subjects.length+'</b><p class="muted">مادة دراسية متاحة</p></div><div class="live-card"><b>'+courses.length+'</b><p class="muted">دورة منشورة</p></div><div class="live-card"><b>'+teachers.length+'</b><p class="muted">ملف مدرس عام</p></div>'}
+
+function addProfileEditor(){
+ const root=$("#live-dash-content");if(!root||!profile)return;
+ root.insertAdjacentHTML("afterbegin",'<div class="live-card" style="margin-bottom:14px"><h3>بيانات ملفي الشخصي</h3><form id="profile-edit-form"><label>الاسم الكامل<input name="full_name" maxlength="100" value="'+esc(profile.full_name||"")+'" required></label><label>المحافظة<input name="governorate" maxlength="80" value="'+esc(profile.governorate||"")+'" placeholder="المحافظة"></label><label>المدينة أو القضاء<input name="city" maxlength="80" value="'+esc(profile.city||"")+'" placeholder="المدينة"></label><label>نبذة تعريفية<textarea name="bio" maxlength="600" placeholder="اكتب نبذة مختصرة">'+esc(profile.bio||"")+'</textarea></label><button class="primary-live">حفظ بيانات الملف</button></form></div>');
+ $("#profile-edit-form").onsubmit=saveProfile;
+}
+async function saveProfile(ev){
+ ev.preventDefault();const form=ev.currentTarget,data=new FormData(form);
+ const updates={full_name:String(data.get("full_name")||"").trim(),governorate:String(data.get("governorate")||"").trim()||null,city:String(data.get("city")||"").trim()||null,bio:String(data.get("bio")||"").trim()||null,updated_at:new Date().toISOString()};
+ if(updates.full_name.length<3){notify("الاسم يجب أن يتكون من ثلاثة أحرف على الأقل.");return}
+ const button=form.querySelector("button");button.disabled=true;
+ const r=await supabase.from("profiles").update(updates).eq("id",user.id);
+ button.disabled=false;
+ if(r.error){notify("تعذر حفظ الملف: "+r.error.message);return}
+ profile={...profile,...updates};$("#live-user").textContent=profile.full_name;notify("تم تحديث بيانات ملفك الشخصي.");await dashboard();
+}
 async function dashboard(){
  const root=$("#live-dash-content");root.innerHTML="جارٍ تحميل بياناتك...";
  try{
@@ -63,6 +79,8 @@ async function dashboard(){
     '<div class="live-card" style="margin-top:14px"><h3>حجوزاتي</h3>'+(b.data.map(x=>'<div class="row-live"><span>'+new Date(x.scheduled_at).toLocaleString("ar-IQ")+'<br><small>'+x.duration_minutes+' دقيقة · '+Number(x.price_iqd||0).toLocaleString("ar-IQ")+' د.ع</small></span><small>'+esc(statusLabel(x.status))+'</small></div>').join("")||"لا توجد حجوزات بعد.")+'</div>'+
    '<div class="live-card" style="margin-top:14px"><h3>نتائج الاختبارات</h3>'+(a.data.map(x=>'<div class="row-live"><span>'+new Date(x.completed_at).toLocaleDateString("ar-IQ")+'</span><b>'+x.score+'%</b></div>').join("")||"لا توجد نتائج بعد.")+'</div>';root.onclick=async ev=>{const q=ev.target.closest("[data-quiz-course]");if(q)await startCourseQuiz(q.dataset.quizCourse)};
   }
+  }
+  addProfileEditor();
  }catch(e){root.innerHTML='<div class="live-card">تعذر تحميل البيانات: '+esc(e.message)+'</div>'}
 }
 
