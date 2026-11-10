@@ -8,5 +8,5 @@
   "background_color": "#090b18",
   "theme_color": "#090b18",
   "description": "منصتك للتعلّم، التطور، وصناعة مستقبلك",
-  "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+  "icons": [{"src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
 }
