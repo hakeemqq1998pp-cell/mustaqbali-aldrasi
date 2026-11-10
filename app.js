@@ -75,10 +75,11 @@ async function loadTeacherQuestions(courseId){
  list.innerHTML='<h3>أسئلة هذه الدورة ('+r.data.length+')</h3>'+(r.data.map((q,i)=>'<div class="row-live"><span><b>'+(i+1)+'. '+esc(q.prompt)+'</b><br><small>الإجابة الصحيحة: '+esc(q.options[q.correct_option]||"")+'</small></span><button class="primary-live" style="background:#a33" data-delete-question="'+q.id+'">حذف</button></div>').join("")||'<p class="muted">لم تضف أسئلة بعد.</p>');
 }
 async function saveQuizQuestion(ev){
- ev.preventDefault();const f=new FormData(ev.currentTarget),options=[0,1,2,3].map(i=>String(f.get("option_"+i)||"").trim());
- const r=await supabase.rpc("teacher_save_course_question",{p_course_id:String(f.get("course_id")),p_question_id:null,p_prompt:String(f.get("prompt")).trim(),p_options:options,p_correct_option:Number(f.get("correct_option")),p_explanation:String(f.get("explanation")||"").trim(),p_sort_order:null});
+ ev.preventDefault();const form=ev.currentTarget,f=new FormData(form),options=[0,1,2,3].map(i=>String(f.get("option_"+i)||"").trim());
+ const courseId=String(f.get("course_id"));
+ const r=await supabase.rpc("teacher_save_course_question",{p_course_id:courseId,p_question_id:null,p_prompt:String(f.get("prompt")).trim(),p_options:options,p_correct_option:Number(f.get("correct_option")),p_explanation:String(f.get("explanation")||"").trim(),p_sort_order:null});
  if(r.error){notify("تعذر حفظ السؤال: "+r.error.message);return}
- notify("تمت إضافة السؤال وحفظ الإجابة الصحيحة بأمان.");ev.currentTarget.reset();await loadTeacherQuestions(String(f.get("course_id")));
+ notify("تمت إضافة السؤال وحفظ الإجابة الصحيحة بأمان.");form.reset();$("#live-quiz-course").value=courseId;await loadTeacherQuestions(courseId);
 }
 async function deleteTeacherQuestion(id){
  const r=await supabase.rpc("teacher_delete_course_question",{p_question_id:id});
