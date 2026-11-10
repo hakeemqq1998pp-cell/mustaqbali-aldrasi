@@ -28,7 +28,7 @@ async function saveProfile(ev){
  const r=await supabase.from("profiles").update(updates).eq("id",user.id);
  button.disabled=false;
  if(r.error){notify("تعذر حفظ الملف: "+r.error.message);return}
- profile={...profile,...updates};$("#live-user").textContent=profile.full_name;notify("تم تحديث بيانات ملفك الشخصي.");await dashboard();
+ profile={...profile,...updates};$("#live-user").textContent=profile.full_name;notify("تم تحديث بيانات ملفك الشخصي.");await loadPublic();await dashboard();
 }
 async function dashboard(){
  const root=$("#live-dash-content");root.innerHTML="جارٍ تحميل بياناتك...";
@@ -66,17 +66,17 @@ async function dashboard(){
   }else{
    const [e,b,a]=await Promise.all([
     supabase.from("enrollments").select("id,status,enrolled_at,course_id").eq("student_id",user.id).order("enrolled_at",{ascending:false}),
-    supabase.from("bookings").select("id,scheduled_at,status,price_iqd,duration_minutes").eq("student_id",user.id).order("scheduled_at",{ascending:false}).limit(20),
+    supabase.from("bookings").select("id,teacher_id,scheduled_at,status,price_iqd,duration_minutes").eq("student_id",user.id).order("scheduled_at",{ascending:false}).limit(20),
     supabase.from("quiz_attempts").select("id,score,completed_at").eq("student_id",user.id).order("completed_at",{ascending:false}).limit(10)
    ]);
    if(e.error)throw e.error;if(b.error)throw b.error;if(a.error)throw a.error;
-   const activeIds=e.data.filter(x=>x.status==="active").map(x=>x.course_id);const activeCourses=courses.filter(x=>activeIds.includes(x.id));let lessons=[];
+   const activeIds=e.data.filter(x=>x.status==="active").map(x=>x.course_id);const activeCourses=courses.filter(x=>activeIds.includes(x.id));const teacherIds=[...new Set(b.data.map(x=>x.teacher_id))];let bookingTeachers=new Map();if(teacherIds.length){const tr=await supabase.from("profiles").select("id,full_name").in("id",teacherIds);if(tr.error)throw tr.error;bookingTeachers=new Map((tr.data||[]).map(x=>[x.id,x.full_name]))}let lessons=[];
    if(activeIds.length){const lr=await supabase.from("lessons").select("id,course_id,title,description,video_url,sort_order").in("course_id",activeIds).order("sort_order");if(lr.error)throw lr.error;lessons=lr.data||[]}
    root.innerHTML='<div class="live-grid"><div class="live-card"><b>'+e.data.length+'</b><p>الدورات المسجل بها</p></div><div class="live-card"><b>'+b.data.length+'</b><p>الحجوزات</p></div><div class="live-card"><b>'+a.data.length+'</b><p>الاختبارات المكتملة</p></div></div>'+
    '<div class="live-card" style="margin-top:14px"><h3>تسجيلاتي</h3>'+(e.data.map(x=>'<div class="row-live"><span>'+esc(courses.find(y=>y.id===x.course_id)?.title||"دورة تعليمية")+'</span><small>'+esc(statusLabel(x.status))+'</small></div>').join("")||"لم تسجل في دورة بعد.")+'</div>'+
    '<div class="live-card" style="margin-top:14px"><h3>دروسي المتاحة</h3>'+(lessons.map(x=>'<div class="row-live"><span>'+esc(x.title)+'<br><small>'+esc(x.description)+'</small></span>'+(x.video_url?'<a target="_blank" rel="noopener" href="'+esc(x.video_url)+'">فتح الفيديو</a>':"")+'</div>').join("")||"تظهر الدروس هنا بعد قبول تسجيلك في الدورة.")+'</div>'+
    '<div class="live-card" style="margin-top:14px"><h3>اختبارات الدورات</h3>'+(activeCourses.map(x=>'<div class="row-live"><span>'+esc(x.title)+'</span><button class="primary-live" data-quiz-course="'+x.id+'">بدء الاختبار</button></div>').join("")||"لا توجد دورات مقبول فيها تحتوي على اختبارات.")+'</div>'+
-    '<div class="live-card" style="margin-top:14px"><h3>حجوزاتي</h3>'+(b.data.map(x=>'<div class="row-live"><span>'+new Date(x.scheduled_at).toLocaleString("ar-IQ")+'<br><small>'+x.duration_minutes+' دقيقة · '+Number(x.price_iqd||0).toLocaleString("ar-IQ")+' د.ع</small></span><small>'+esc(statusLabel(x.status))+'</small></div>').join("")||"لا توجد حجوزات بعد.")+'</div>'+
+    '<div class="live-card" style="margin-top:14px"><h3>حجوزاتي</h3>'+(b.data.map(x=>'<div class="row-live"><span>'+esc(bookingTeachers.get(x.teacher_id)||"مدرس")+' · '+new Date(x.scheduled_at).toLocaleString("ar-IQ")+'<br><small>'+x.duration_minutes+' دقيقة · '+Number(x.price_iqd||0).toLocaleString("ar-IQ")+' د.ع</small></span><small>'+esc(statusLabel(x.status))+'</small></div>').join("")||"لا توجد حجوزات بعد.")+'</div>'+
    '<div class="live-card" style="margin-top:14px"><h3>نتائج الاختبارات</h3>'+(a.data.map(x=>'<div class="row-live"><span>'+new Date(x.completed_at).toLocaleDateString("ar-IQ")+'</span><b>'+x.score+'%</b></div>').join("")||"لا توجد نتائج بعد.")+'</div>';root.onclick=async ev=>{const q=ev.target.closest("[data-quiz-course]");if(q)await startCourseQuiz(q.dataset.quizCourse)};
   }
   }
